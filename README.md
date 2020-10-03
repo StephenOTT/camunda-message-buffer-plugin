@@ -1,0 +1,1 @@
+# Camunda Message Buffer Plugin
