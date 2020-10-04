@@ -6,16 +6,15 @@ import org.camunda.bpm.engine.impl.cmd.CorrelateAllMessageCmd
 import org.camunda.bpm.engine.impl.cmd.CorrelateMessageCmd
 import org.camunda.bpm.engine.impl.interceptor.Command
 import org.camunda.bpm.engine.impl.interceptor.CommandInterceptor
-import org.camunda.bpm.engine.impl.jobexecutor.JobDeclaration
-import org.camunda.bpm.engine.impl.jobexecutor.TimerDeclarationImpl
-import org.camunda.bpm.engine.impl.jobexecutor.TimerDeclarationType
-import org.camunda.bpm.engine.impl.persistence.entity.JobDefinitionEntity
 import org.camunda.bpm.engine.impl.persistence.entity.MessageEntity
-import org.camunda.bpm.engine.impl.persistence.entity.TimerEntity
-import org.camunda.bpm.engine.impl.util.ParseUtil
 
 class MessageCommandInterceptor(
 ) : CommandInterceptor() {
+
+    companion object {
+        var processDefId: String = ""
+        var jobDefinitionId: String = ""
+    }
 
     override fun <T> execute(command: Command<T>): T {
         // If it is not a CorrelateMessageCmd that just go to next:
@@ -25,7 +24,6 @@ class MessageCommandInterceptor(
 
         return if (command is CorrelateMessageCmd || command is CorrelateAllMessageCmd) {
             kotlin.runCatching {
-
                 // Run the comment
                 next.execute(command)
             }.getOrElse {
@@ -33,10 +31,14 @@ class MessageCommandInterceptor(
                 if (it is MismatchingMessageCorrelationException) {
                     next.execute { cc ->
                         if (cc.currentJob == null) {
-                            val myClass = (command as CorrelateMessageCmd).convertForPersistence()
+
+                            //@TODO --> Add support for custom retry cycles logic with a special handler
+                            val commandDto = (command as CorrelateMessageCmd).convertForPersistence()
+
+                            commandDto.failedJobRetryExpression
 
                             val job = MessageEntity()
-                            val config = BufferedMessageJobHandler.BufferedMessageJobHandlerConfiguration(myClass)
+                            val config = BufferedMessageJobHandler.BufferedMessageJobHandlerConfiguration(commandDto)
                             job.jobHandlerType = "buffered-message"
                             job.jobHandlerConfigurationRaw = config.toCanonicalString()
 

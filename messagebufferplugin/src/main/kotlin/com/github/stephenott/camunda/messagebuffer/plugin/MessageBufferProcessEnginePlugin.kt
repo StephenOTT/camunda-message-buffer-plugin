@@ -3,12 +3,12 @@ package com.github.stephenott.camunda.messagebuffer.plugin
 import org.camunda.bpm.engine.ProcessEngine
 import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl
 import org.camunda.bpm.engine.impl.cfg.ProcessEnginePlugin
+import org.camunda.bpm.model.bpmn.Bpmn
 
 
 open class MessageBufferProcessEnginePlugin : ProcessEnginePlugin {
 
     val interceptor = MessageCommandInterceptor()
-    val failedJobInterceptor = BufferedMessageFailedJobCmdInterceptor()
 
     override fun preInit(processEngineConfiguration: ProcessEngineConfigurationImpl) {
 
@@ -16,18 +16,20 @@ open class MessageBufferProcessEnginePlugin : ProcessEnginePlugin {
             processEngineConfiguration.customPreCommandInterceptorsTxRequired = mutableListOf()
         }
         processEngineConfiguration.customPreCommandInterceptorsTxRequired.add(interceptor)
-        processEngineConfiguration.customPreCommandInterceptorsTxRequired.add(failedJobInterceptor)
 
         if (processEngineConfiguration.customPreCommandInterceptorsTxRequiresNew == null) {
             processEngineConfiguration.customPreCommandInterceptorsTxRequiresNew = mutableListOf()
         }
         processEngineConfiguration.customPreCommandInterceptorsTxRequiresNew.add(interceptor)
-        processEngineConfiguration.customPreCommandInterceptorsTxRequiresNew.add(failedJobInterceptor)
 
         if (processEngineConfiguration.customJobHandlers == null) {
             processEngineConfiguration.customJobHandlers = mutableListOf()
         }
         processEngineConfiguration.customJobHandlers.add(BufferedMessageJobHandler())
+
+        processEngineConfiguration.setFailedJobCommandFactory { jobId, exception ->
+            return@setFailedJobCommandFactory CustomDefaultJobRetryCmd(jobId, exception)
+        }
     }
 
     override fun postInit(processEngineConfiguration: ProcessEngineConfigurationImpl) {

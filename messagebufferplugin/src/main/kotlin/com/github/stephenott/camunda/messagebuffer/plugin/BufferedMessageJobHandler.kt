@@ -1,13 +1,18 @@
 package com.github.stephenott.camunda.messagebuffer.plugin
 
 import org.camunda.bpm.engine.impl.MessageCorrelationBuilderImpl
+import org.camunda.bpm.engine.impl.bpmn.parser.DefaultFailedJobParseListener
+import org.camunda.bpm.engine.impl.bpmn.parser.FailedJobRetryConfiguration
 import org.camunda.bpm.engine.impl.cmd.CorrelateMessageCmd
 import org.camunda.bpm.engine.impl.context.Context
+import org.camunda.bpm.engine.impl.db.entitymanager.cache.CachedDbEntity
 import org.camunda.bpm.engine.impl.interceptor.CommandContext
 import org.camunda.bpm.engine.impl.jobexecutor.JobHandler
 import org.camunda.bpm.engine.impl.jobexecutor.JobHandlerConfiguration
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity
 import org.camunda.bpm.engine.impl.persistence.entity.JobEntity
+import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity
+import org.camunda.bpm.engine.impl.pvm.process.ActivityImpl
 import org.camunda.bpm.engine.variable.impl.VariableMapImpl
 import org.camunda.spin.Spin
 import kotlin.reflect.KFunction
@@ -18,6 +23,10 @@ import kotlin.reflect.jvm.isAccessible
 
 class BufferedMessageJobHandler: JobHandler<BufferedMessageJobHandler.BufferedMessageJobHandlerConfiguration> {
 
+    companion object {
+        const val TYPE = "buffered-message"
+    }
+
     class BufferedMessageJobHandlerConfiguration(
             val cfg: BufferedMessageConfiguration
     ): JobHandlerConfiguration {
@@ -27,7 +36,7 @@ class BufferedMessageJobHandler: JobHandler<BufferedMessageJobHandler.BufferedMe
     }
 
     override fun getType(): String {
-        return "buffered-message"
+        return TYPE
     }
 
     override fun execute(configuration: BufferedMessageJobHandlerConfiguration, execution: ExecutionEntity?, commandContext: CommandContext, tenantId: String?) {
