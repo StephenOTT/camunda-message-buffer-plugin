@@ -18,15 +18,6 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 
-data class BufferedMessage(
-        val messageCommand: AbstractCorrelateMessageCmd,
-        var attempts: Int
-) : Serializable {
-    init {
-        check(attempts >= 0) { "attempts cannot be less than zero." }
-    }
-}
-
 fun CorrelateMessageCmd.convertForPersistence(): BufferedMessageConfiguration {
     val builderImpl = ((this::class.memberProperties.find { it.name == "builder" } as KProperty1<Any, *>).also { it.isAccessible = true }).get(this) as MessageCorrelationBuilderImpl
     val startMessageOnly = ((this::class.memberProperties.find { it.name == "startMessageOnly" } as KProperty1<Any, *>).also { it.isAccessible = true }).get(this) as Boolean
@@ -70,31 +61,3 @@ class BufferedMessageConfiguration(
         val builderPayloadProcessInstanceVariables: Map<String, Any?>?,
         val builderPayloadProcessInstanceVariablesLocal: Map<String, Any?>?
 )
-
-
-class VariableMapSerializer: StdSerializer<VariableMap>(VariableMap::class.java){
-    override fun serialize(value: VariableMap, gen: JsonGenerator, provider: SerializerProvider) {
-        gen.writeStartObject()
-
-        value.forEach { k, v ->
-            gen.writeFieldName(k)
-                gen.writeStartObject()
-                    gen.writeStringField("@class", v::class.java.canonicalName)
-                    gen.writeObjectField("value", v)
-                gen.writeEndObject()
-        }
-        gen.writeEndObject()
-    }
-}
-
-class VariableMapDeserializer: StdDeserializer<VariableMap>(VariableMap::class.java){
-    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): VariableMap {
-        val tree = p.readValueAsTree<JsonNode>()
-        val vMap = VariableMapImpl()
-        tree.elements().forEachRemaining {
-            val inner = p.readValueAsTree<JsonNode>()
-            vMap[p.currentName] = it.get("value").traverse(p.codec).readValueAs(Class.forName(it.get("@class").textValue()))
-        }
-        return vMap
-    }
-}

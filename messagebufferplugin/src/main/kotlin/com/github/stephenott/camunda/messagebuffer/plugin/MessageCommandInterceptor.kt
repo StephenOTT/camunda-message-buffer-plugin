@@ -15,7 +15,6 @@ import org.camunda.bpm.engine.impl.persistence.entity.TimerEntity
 import org.camunda.bpm.engine.impl.util.ParseUtil
 
 class MessageCommandInterceptor(
-        val maxAttempts: Int
 ) : CommandInterceptor() {
 
     override fun <T> execute(command: Command<T>): T {

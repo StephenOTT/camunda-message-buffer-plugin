@@ -5,17 +5,9 @@ import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl
 import org.camunda.bpm.engine.impl.cfg.ProcessEnginePlugin
 
 
-open class MessageBufferProcessEnginePlugin @JvmOverloads constructor(
-    val maxAttempts: Int = 3,
-    val retryPeriod: Long = 5000,
-    val corePoolSize: Int = 1
-) : ProcessEnginePlugin {
+open class MessageBufferProcessEnginePlugin : ProcessEnginePlugin {
 
-    init {
-        require(maxAttempts >= 0) {"maxAttempts must be greater than or equal to zero."}
-    }
-
-    val interceptor = MessageCommandInterceptor(maxAttempts)
+    val interceptor = MessageCommandInterceptor()
     val failedJobInterceptor = BufferedMessageFailedJobCmdInterceptor()
 
     override fun preInit(processEngineConfiguration: ProcessEngineConfigurationImpl) {
